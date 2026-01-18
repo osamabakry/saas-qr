@@ -28,6 +28,9 @@ WORKDIR /app
 # Set NODE_ENV to production
 ENV NODE_ENV=production
 
+# Install OpenSSL (required for Prisma on Alpine)
+RUN apk add --no-cache openssl
+
 # Copy package files and install only production dependencies
 # Copy package files
 COPY package*.json ./
