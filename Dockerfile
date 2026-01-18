@@ -27,7 +27,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy package files and install only production dependencies
+# Copy package files
 COPY package*.json ./
+COPY --from=builder /app/prisma ./prisma
+
+# Install only production dependencies
+# This runs postinstall which needs the schema we just copied
 RUN npm ci --only=production
 
 # Copy built assets from builder stage
