@@ -12,7 +12,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get('PORT') || 3001;
   const apiPrefix = configService.get('API_PREFIX') || 'api/v1';
-  const frontendUrl = configService.get('FRONTEND_URL') || 'http://localhost:3000';
+  const frontendUrl = configService.get('FRONTEND_URL') || 'https://otlobha-qr.vercel.app';
 
   // Global prefix
   app.setGlobalPrefix(apiPrefix);

@@ -11,7 +11,7 @@ export class QrCodesService {
     private prisma: PrismaService,
     private storageService: StorageService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   async generateQrCode(restaurantId: string, tableId?: string) {
     // Check if QR already exists for this table
@@ -27,7 +27,7 @@ export class QrCodesService {
 
     // Generate unique code
     const code = uuidv4();
-    const baseUrl = this.configService.get('QR_BASE_URL') || 'http://localhost:3000/menu';
+    const baseUrl = this.configService.get('QR_BASE_URL') || 'https://otlobha-qr.vercel.app/menu';
     const publicUrl = `${baseUrl}/${code}`;
 
     // Generate QR code image
