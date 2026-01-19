@@ -15,19 +15,27 @@ export class StorageService {
   constructor(private configService: ConfigService) {
     const accessKeyId = this.configService.get('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get('AWS_SECRET_ACCESS_KEY');
-    
+
     // Check if AWS credentials are available
     this.useLocalStorage = !accessKeyId || !secretAccessKey;
-    
+
     if (!this.useLocalStorage) {
       try {
-        this.s3 = new AWS.S3({
+        const endpoint = this.configService.get('AWS_ENDPOINT');
+        const s3Config: AWS.S3.Types.ClientConfiguration = {
           accessKeyId,
           secretAccessKey,
           region: this.configService.get('AWS_REGION') || 'us-east-1',
-        });
+          s3ForcePathStyle: true, // Needed for Supabase/MinIO
+        };
+
+        if (endpoint) {
+          s3Config.endpoint = endpoint;
+        }
+
+        this.s3 = new AWS.S3(s3Config);
         this.bucket = this.configService.get('AWS_S3_BUCKET') || 'qr-menu-images';
-        this.logger.log('Using AWS S3 for file storage');
+        this.logger.log(`Using AWS S3 for file storage (Bucket: ${this.bucket})`);
       } catch (error) {
         this.logger.warn('Failed to initialize AWS S3, falling back to local storage');
         this.useLocalStorage = true;
@@ -65,6 +73,15 @@ export class StorageService {
       };
 
       await this.s3!.putObject(params).promise();
+
+      // If using custom endpoint (like Supabase), construct URL differently
+      const endpoint = this.configService.get('AWS_ENDPOINT');
+      if (endpoint) {
+        // Supabase/MinIO style: endpoint/bucket/key
+        return `${endpoint}/${this.bucket}/${key}`;
+      }
+
+      // Standard AWS S3 URL
       return `https://${this.bucket}.s3.amazonaws.com/${key}`;
     } catch (error) {
       this.logger.error('Failed to upload to S3, falling back to local storage', error);
@@ -79,7 +96,7 @@ export class StorageService {
   ): Promise<string> {
     const filePath = path.join(this.uploadsDir, key);
     const dir = path.dirname(filePath);
-    
+
     // Create directory if it doesn't exist
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -89,9 +106,9 @@ export class StorageService {
     fs.writeFileSync(filePath, buffer);
 
     // Return local URL (backend server URL)
-    const backendUrl = this.configService.get('BACKEND_URL') || 
-                      this.configService.get('API_URL') || 
-                      'http://localhost:3001';
+    const backendUrl = this.configService.get('BACKEND_URL') ||
+      this.configService.get('API_URL') ||
+      'http://localhost:3001';
     return `${backendUrl}/uploads/${key}`;
   }
 
@@ -121,10 +138,10 @@ export class StorageService {
   private async deleteFileLocal(url: string): Promise<void> {
     try {
       // Extract key from URL (remove /uploads/ prefix)
-      const key = url.includes('/uploads/') 
-        ? url.split('/uploads/')[1] 
+      const key = url.includes('/uploads/')
+        ? url.split('/uploads/')[1]
         : url.split('/').pop();
-      
+
       if (!key) return;
 
       const filePath = path.join(this.uploadsDir, key);
